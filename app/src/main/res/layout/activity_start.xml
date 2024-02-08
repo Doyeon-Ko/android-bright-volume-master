@@ -1,0 +1,80 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/explanationText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/explanation_text"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="16dp"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/white"/>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/explanationText"
+        android:layout_marginTop="30dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/accessibilityButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/accessibility_button_text"
+                android:layout_marginTop="16dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/white" />
+
+            <ImageView
+                android:id="@+id/accessibilityTick"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginTop="30dp"
+                android:layout_marginStart="20dp"
+                android:src="@drawable/tick_icon"
+                android:visibility="gone"
+                android:contentDescription="@string/tick_icon_description"/>
+            
+        </LinearLayout>
+        
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/systemSettingsButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/system_settings_button_text"
+                android:layout_marginTop="16dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/white" />
+
+            <ImageView
+                android:id="@+id/systemSettingsTick"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginTop="30dp"
+                android:layout_marginStart="20dp"
+                android:src="@drawable/tick_icon"
+                android:visibility="gone"
+                android:contentDescription="@string/tick_icon_description"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>
