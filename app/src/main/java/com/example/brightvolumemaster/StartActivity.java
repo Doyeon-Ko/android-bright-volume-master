@@ -1,26 +1,32 @@
 package com.example.brightvolumemaster;
 
+import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class StartActivity extends AppCompatActivity {
-
-    private TextView explanationText;
-    private Button accessibilityButton;
-    private Button systemSettingsButton;
     private boolean isAccessibilityPermissionGranted;
     private boolean isSystemSettingsPermissionGranted;
+
+    private static final String PREFS_NAME = "StartActivitySettings";
+
+    private SharedPreferences preferences;
+    private SharedPreferences.Editor editor;
 
     private ImageView accessibilityTick;
 
@@ -32,10 +38,10 @@ public class StartActivity extends AppCompatActivity {
         setContentView(R.layout.activity_start);
 
         // Initialize UI elements
-        explanationText = findViewById(R.id.explanationText);
-        accessibilityButton = findViewById(R.id.accessibilityButton);
+        TextView explanationText = findViewById(R.id.explanationText);
+        Button accessibilityButton = findViewById(R.id.accessibilityButton);
         accessibilityTick = findViewById(R.id.accessibilityTick);
-        systemSettingsButton = findViewById(R.id.systemSettingsButton);
+        Button systemSettingsButton = findViewById(R.id.systemSettingsButton);
         systemSettingsTick = findViewById(R.id.systemSettingsTick);
 
         // Set initial visibility of UI elements
@@ -43,13 +49,64 @@ public class StartActivity extends AppCompatActivity {
         accessibilityButton.setVisibility(View.VISIBLE);
         systemSettingsButton.setVisibility(View.VISIBLE);
 
+        //Initialize SharedPreferences and Editor
+        preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        editor = preferences.edit();
+        editor.putBoolean("accessibilityPermissionAttempted", false);
+        editor.putBoolean("systemModificationAttempted", false);
+        editor.putBoolean("doNotShowAgain", false);
+        editor.apply();
+
         // Set click listener for the accessibility button
         accessibilityButton.setOnClickListener(v -> {
             // Check if accessibility service is enabled
             isAccessibilityPermissionGranted = isAccessibilityPermissionGranted();
-            if (isAccessibilityPermissionGranted) {
+
+            boolean accessibilityPermissionAttempted = preferences.getBoolean("accessibilityPermissionAttempted", false);
+            Log.d("accessibilityPermissionAttempted", "the boolean value of accessibilityPermissionAttempted : " + accessibilityPermissionAttempted);
+
+            // Check if the user has attempted to grant accessibility permission before
+            if (!accessibilityPermissionAttempted) {
+                // If it's the first attempt, show the confirmation dialog
+                showPermissionDialog("알림", "접근성 권한 필요 : BrightVolume Master는 사용자가 설정한 앱별 밝기와 볼륨을 앱에 적용하기 위해 접근성 권한을 사용합니다.\n\n" +
+                        "이 권한은 디바이스가 현재 실행하고 있는 앱을 감지하기 위한 용도로만 사용되며, 접근성 설정 창의 '설치된 서비스' 혹은 '다운로드된 앱'에서 [BrightVolume Master] 항목을 눌러 활성화할 수 있습니다.",
+                        "취소", "설정 화면으로 이동",
+                        (dialog, which) -> {
+                            // User clicked "취소"
+                            //Dismiss the dialog without any further action
+                        },
+                        (dialog, which) -> {
+                            // User clicked "설정 화면으로 이동"
+                            editor.putBoolean("accessibilityPermissionAttempted", true);
+                            editor.apply();
+
+                            // Open accessibility settings
+                            openAccessibilitySettings();
+                        });
+            } else if (!isAccessibilityPermissionGranted) {
+                // Check if the user has clicked "다시 표시하지 않음" in the past
+                boolean doNotShowAgain = preferences.getBoolean("doNotShowAgain", false);
+                if (!doNotShowAgain) {
+                    showPermissionDialog("알림", "[BrightVolume Master] 항목은 '설치된 서비스' 혹은 '다운로드 된 앱'에 있을 수 있습니다.",
+                            "다시 표시하지 않음", "확인",
+                            (dialog, which) -> {
+                                // User clicked "다시 표시하지 않음"
+                                // Set the flag in SharedPreferences
+                                editor.putBoolean("doNotShowAgain", true);
+                                editor.apply();
+                                // Dismiss the dialog without any further action
+                            },
+                            (dialog, which) -> {
+                                // User clicked "확인"
+                                // Open accessibility settings
+                                openAccessibilitySettings();
+                            });
+                } else {
+                    openAccessibilitySettings();
+                }
+            } else {
                 // Display a guidance message indicating that the accessibility service is already enabled
-                showGuidanceDialog("알림", "접근성 권한이 이미 활성화되어 있습니다.",
+                showPermissionDialog("알림", "접근성 권한이 이미 활성화되어 있습니다.",
                         "확인", "설정 화면으로 이동",
                         (dialog, which) -> {
                             // User clicked "확인"
@@ -60,16 +117,34 @@ public class StartActivity extends AppCompatActivity {
                             // Open accessibility settings
                             openAccessibilitySettings();
                         });
-            } else {
-                // Display a confirmation dialog with "취소" and "접근성 권한 활성화" buttons
-                showConfirmationDialog();
             }
         });
 
         // Set click listener for the system settings button
         systemSettingsButton.setOnClickListener(v -> {
-            // Open system settings for modification permission
-            openWriteSettingsPermission();
+            boolean systemModificationAttempted = preferences.getBoolean("systemModificationAttempted", false);
+            Log.d("ButtonClick", "System Settings Button Clicked - systemModificationAttempted: " + systemModificationAttempted);
+
+            // Check if the user has attempted to grant system modification permission before
+            if (!systemModificationAttempted) {
+                // If it's the first attempt, show the confirmation dialog
+                showPermissionDialog("알림", "시스템 수정 권한 필요 : BrightVolume Master는 앱별 밝기를 조정하기 위해 시스템 수정 권한을 사용합니다.\n\n" +
+                                "이 권한은 사용자가 설정한 앱별 밝기 값을 실행 중인 안드로이드 앱에 적용하기 위한 용도로만 사용되며, 다른 시스템 설정에는 영향을 미치지 않습니다.",
+                        "취소", "설정 화면으로 이동",
+                        (dialog, which) -> {
+                            // User clicked "취소"
+                            //Dismiss the dialog without any further action
+                        },
+                        (dialog, which) -> {
+                            // User clicked "설정 화면으로 이동"
+                            editor.putBoolean("systemModificationAttempted", true);
+                            editor.apply();
+                            openWriteSettingsPermission();
+                        });
+            } else {
+                // Open system settings modification permission
+                openWriteSettingsPermission();
+            }
         });
     }
 
@@ -101,38 +176,6 @@ public class StartActivity extends AppCompatActivity {
         } else {
             systemSettingsTick.setVisibility(View.GONE);
         }
-
-        // Check if the user has clicked "다시 표시하지 않음" in the past
-        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-        boolean doNotShowAgain = preferences.getBoolean("doNotShowAgain", false);
-
-        accessibilityButton.setOnClickListener(v -> {
-
-            // Show guidance message if the permission is not granted
-            if (!isAccessibilityPermissionGranted && !doNotShowAgain) {
-                showGuidanceDialog("알림", "[앱별 밝기] 항목은 '설치된 서비스' 혹은 '다운로드 된 앱'에 있을 수 있습니다.",
-                        "다시 표시하지 않음", "확인",
-                        (dialog, which) -> {
-                            // User clicked "다시 표시하지 않음"
-                            // Set the flag in SharedPreferences
-                            preferences.edit().putBoolean("doNotShowAgain", true).apply();
-                            // Dismiss the dialog without any further action
-                        },
-                        (dialog, which) -> {
-                            // User clicked "확인"
-                            // Open accessibility settings
-                            openAccessibilitySettings();
-                        });
-            } else {
-                openAccessibilitySettings();
-            }
-        });
-
-        systemSettingsButton.setOnClickListener(v -> {
-            if (!isSystemSettingsPermissionGranted) {
-                openWriteSettingsPermission();
-            }
-        });
     }
 
     // Method to check if accessibility service is enabled
@@ -172,42 +215,50 @@ public class StartActivity extends AppCompatActivity {
     // Method to open accessibility settings
     private void openAccessibilitySettings() {
         Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-        startActivity(intent);
+        startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
+
+    private final ActivityResultLauncher<Intent> writeSettingsLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() == Activity.RESULT_OK) {
+                            // The user granted the WRITE_SETTINGS permission
+                            if (Settings.System.canWrite(this)) {
+                                // Handle the permission being granted
+                                Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show();
+                            }
+                        } else {
+                            // The user did not grant the permission
+                            // Handle it accordingly, e.g., show a message to the user
+                            Toast.makeText(this, "Permission not granted", Toast.LENGTH_SHORT).show();
+                        }
+                    });
 
     // Method to open system settings for modification permission
     private void openWriteSettingsPermission() {
-        Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
-        intent.setData(Uri.parse("package:" + getPackageName()));
-        startActivity(intent);
+        // Check if the app has the WRITE_SETTINGS permission
+        if (Settings.System.canWrite(this)) {
+            // The app already has the permission, open system settings directly
+            Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } else {
+            // Request the WRITE_SETTINGS permission
+            Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            writeSettingsLauncher.launch(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
     }
 
     // Method to display a guidance message
-    private void showGuidanceDialog(String title, String message, String negativeButtonText, String positiveButtonText,
-                                    DialogInterface.OnClickListener negativeClickListener,
-                                    DialogInterface.OnClickListener positiveClickListener) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(title)
+    private void showPermissionDialog(String title, String message, String negativeButtonText, String positiveButtonText,
+                                      DialogInterface.OnClickListener negativeClickListener,
+                                      DialogInterface.OnClickListener positiveClickListener) {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
                 .setMessage(message)
-                .setNegativeButton(negativeButtonText, negativeClickListener) // "확인" button with null click listener to dismiss the dialog
+                .setNegativeButton(negativeButtonText, negativeClickListener)
                 .setPositiveButton(positiveButtonText, positiveClickListener)
                 .show();
     }
-
-    // Method to display a confirmation dialog
-    private void showConfirmationDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("알림")
-                .setMessage("접근성 권한을 통해 BrightVolume Master는 사용자가 현재 실행하고 있는 애플리케이션을 감지합니다. [앱별 밝기] 항목은 디바이스의 설정 중 '설치된 서비스' 혹은 '다운로드된 앱'에서 찾을 수 있습니다.")
-                .setNegativeButton("취소", null) // "취소" button with null click listener to dismiss the dialog
-                .setPositiveButton("접근성 권한 활성화", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        // Open accessibility settings when "접근성 권한 활성화" button is clicked
-                        openAccessibilitySettings();
-                    }
-                })
-                .show();
-    }
 }
-
