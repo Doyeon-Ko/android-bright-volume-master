@@ -1,70 +1,71 @@
+
 package com.example.brightvolumemaster;
 
 import android.accessibilityservice.AccessibilityService;
-import android.content.ContentResolver;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.provider.Settings;
 import android.media.AudioManager;
+import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class BrightnessAccessibilityService extends AccessibilityService {
     private boolean isDefaultValuesRetrieved = false;
+    private String lastForegroundApp= "";
 
     // Retrieve the system's maximum brightness and volume values
     int maxBrightness = 255;
     int defaultBrightness = (int) (0.5 * maxBrightness);
 
+    int maxVolume;
+
+    int defaultVolume;
+
     int systemBrightness;
 
     int systemVolume;
 
-    AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-    int maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-    int defaultVolume = (int) (0.5 * maxVolume);
+    AudioManager audioManager;
+
+    @Override
+    public void onServiceConnected() {
+        super.onServiceConnected();
+
+        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        defaultVolume = (int) (0.5 * maxVolume);
+    }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        String packageName;
+        Log.d("AccessibilityService", "Event received: " + event.toString());
 
         // Retrieve system's default brightness and volume values
         if (!isDefaultValuesRetrieved) {
             systemBrightness = getSystemBrightness();
             systemVolume = getSystemVolume();
             isDefaultValuesRetrieved = true;
+            Log.d("AccessibilityService", "Default values retrieved: Brightness = " + systemBrightness + ", Volume = " + systemVolume);
         }
 
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             // The window state has changed, indicating a change in the foreground app
-            packageName = String.valueOf(event.getPackageName());
+            String currentForegroundApp = getForegroundApp();
+            Log.d("AccessibilityService", "Current Foreground App: " + currentForegroundApp);
 
-            // Retrieve uniqueAppPackageNames from SharedPreferences
-            SharedPreferences preferencesUserApp = getApplicationContext().getSharedPreferences("UserApp", Context.MODE_PRIVATE);
-            Set<String> uniqueAppPackageNames = preferencesUserApp.getStringSet("uniqueAppPackageNames", new HashSet<>());
-
-            if (uniqueAppPackageNames.contains(packageName)) {
-                    // Use packageName to access SharedPreferences
-                    SharedPreferences preferencesSettingValue = getApplicationContext().getSharedPreferences(packageName + "_settings", Context.MODE_PRIVATE);
-
-                    // Retrieve brightness and volume values based on the current package name
-                    int brightnessValue = preferencesSettingValue.getInt(packageName + "SAVED_BRIGHTNESS", defaultBrightness);
-                    int volumeValue = preferencesSettingValue.getInt(packageName + "SAVED_VOLUME", defaultVolume);
-
-                    int systemBrightnessValue = convertScaleToBrightness(brightnessValue);
-                    int systemVolumeValue = convertScaleToVolume(volumeValue);
-
-                    // Adjust brightness and volume based on the retrieved values
-                    adjustBrightness(systemBrightnessValue);
-                    adjustVolume(systemVolumeValue);
-                } else {
-                // Apply the system's default brightness and volume values when the user is not running any Android app.
-                adjustBrightness(systemBrightness);
-                adjustVolume(systemVolume);
+            if (!currentForegroundApp.equals(lastForegroundApp)) {
+                // Update the lastForegroundApp and adjust settings based on the new foreground
+                lastForegroundApp = currentForegroundApp;
+                Log.d("AccessibilityService", "Foreground App Changed: " + lastForegroundApp);
+                adjustSettingsForForegroundApp();
             }
         }
     }
@@ -74,16 +75,30 @@ public class BrightnessAccessibilityService extends AccessibilityService {
         // This method is called when the accessibility service is interrupted or disabled
     }
 
+    private String getForegroundApp() {
+        String foregroundApp = "";
+
+        UsageStatsManager usageStatsManager = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
+        long currentTime = System.currentTimeMillis();
+        List<UsageStats> appList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, currentTime - 1000 * 3600, currentTime);
+
+        if (appList != null && !appList.isEmpty()) {
+            UsageStats stats = appList.get(0);
+            foregroundApp = stats.getPackageName();
+        }
+
+        return foregroundApp;
+    }
+
     // Method to get the default brightness value of system
     private int getSystemBrightness() {
         try {
-            ContentResolver contentResolver = getContentResolver();
-            return Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS);
+            Context context = getApplicationContext();
+            return Settings.System.getInt(context.getContentResolver(), Settings.System.SCREEN_BRIGHTNESS);
         } catch (Settings.SettingNotFoundException e) {
             e.printStackTrace();
-
-            return defaultBrightness;
         }
+        return defaultBrightness;
     }
 
     // Method to get the default volume value of system
@@ -120,6 +135,7 @@ public class BrightnessAccessibilityService extends AccessibilityService {
 
     private int convertScaleToVolume(int scaleValue) {
         // Convert the volume value from the user-friendly scale (0-100) to the system scale (0-maxVolume)
+
         return (int) ((scaleValue / 100.0) * maxVolume);
     }
 
@@ -128,6 +144,34 @@ public class BrightnessAccessibilityService extends AccessibilityService {
         // Use AudioManager to adjust the media volume
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeValue, 0);
+    }
+
+    // Method to adjust settings based on the foreground app using UsageStatsManager
+    private void adjustSettingsForForegroundApp() {
+        String packageName = lastForegroundApp;
+
+        // Retrieve uniqueAppPackageNames from SharedPreferences
+        SharedPreferences preferencesUserApp = getApplicationContext().getSharedPreferences("UserApp", Context.MODE_PRIVATE);
+        Set<String> uniqueAppPackageNames = preferencesUserApp.getStringSet("uniqueAppPackageNames", new HashSet<>());
+
+        if (uniqueAppPackageNames.contains(packageName)) {
+            // Use packageName to access SharedPreferences
+            SharedPreferences preferencesSettingValue = getApplicationContext().getSharedPreferences(packageName + "_settings", Context.MODE_PRIVATE);
+
+            // Retrieve brightness and volume values based on the current package name
+            int brightnessValue = preferencesSettingValue.getInt(packageName + "SAVED_BRIGHTNESS", defaultBrightness);
+            int volumeValue = preferencesSettingValue.getInt(packageName + "SAVED_VOLUME", defaultVolume);
+
+            int systemBrightnessValue = convertScaleToBrightness(brightnessValue);
+            int systemVolumeValue = convertScaleToVolume(volumeValue);
+
+            adjustBrightness(systemBrightnessValue);
+            adjustVolume(systemVolumeValue);
+        } else {
+            // Apply the system's default brightness and volume values when the user is not running any Android app.
+            adjustBrightness(systemBrightness);
+            adjustVolume(systemVolume);
+        }
     }
 }
 

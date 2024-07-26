@@ -51,7 +51,6 @@ public class SubActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-
         // Save app-specific settings
         saveAppSpecificSettings(packageName, brightnessValue, volumeValue);
     }
