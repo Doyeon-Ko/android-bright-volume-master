@@ -1,4 +1,3 @@
-
 package com.example.brightvolumemaster;
 
 import android.accessibilityservice.AccessibilityService;
@@ -8,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.IBinder;
 import android.provider.Settings;
 import android.media.AudioManager;
 import android.util.Log;
@@ -36,8 +36,15 @@ public class BrightnessAccessibilityService extends AccessibilityService {
     AudioManager audioManager;
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.d("AccessibilityService", "onCreate: Service created");
+    }
+
+    @Override
     public void onServiceConnected() {
         super.onServiceConnected();
+        Log.d("AccessibilityService", "Service connected");
 
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
@@ -71,8 +78,15 @@ public class BrightnessAccessibilityService extends AccessibilityService {
     }
 
     @Override
+    public void onDestroy() {
+        Log.d("AccessibilityService", "onDestroy: Service destroyed");
+        super.onDestroy();
+    }
+
+    @Override
     public void onInterrupt() {
         // This method is called when the accessibility service is interrupted or disabled
+        Log.d("AccessibilityService", "onInterrupt: Service interrupted");
     }
 
     private String getForegroundApp() {
@@ -83,12 +97,20 @@ public class BrightnessAccessibilityService extends AccessibilityService {
         List<UsageStats> appList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, currentTime - 1000 * 3600, currentTime);
 
         if (appList != null && !appList.isEmpty()) {
-            UsageStats stats = appList.get(0);
-            foregroundApp = stats.getPackageName();
+            UsageStats recentStats = null;
+            for (UsageStats stats : appList) {
+                if (recentStats == null || stats.getLastTimeUsed() > recentStats.getLastTimeUsed()) {
+                    recentStats = stats;
+                }
+            }
+
+            if (recentStats != null) {
+                foregroundApp = recentStats.getPackageName();
+            }
         }
 
         return foregroundApp;
-    }
+    } 
 
     // Method to get the default brightness value of system
     private int getSystemBrightness() {
@@ -167,10 +189,13 @@ public class BrightnessAccessibilityService extends AccessibilityService {
 
             adjustBrightness(systemBrightnessValue);
             adjustVolume(systemVolumeValue);
+
+            Log.d("Settings", "Applied settings for " + packageName + ": brightness = " + brightnessValue + ", volume = " + volumeValue);
         } else {
             // Apply the system's default brightness and volume values when the user is not running any Android app.
             adjustBrightness(systemBrightness);
             adjustVolume(systemVolume);
+            Log.d("Settings", "Applied settings for " + packageName + ": brightness = " + systemBrightness + ", volume = " + systemVolume);
         }
     }
 }

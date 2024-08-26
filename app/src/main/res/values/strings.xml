@@ -21,9 +21,10 @@
     <string name="default_selected_app_name">Selected App</string>
     <string name="selected_app_icon_description">Selected App Icon</string>
     <string name="accessibility_service_label">Accessibility Service Label</string>
-    <string name="explanation_text">BrightVolume Master 앱을 실행하기 위해서는 디바이스의 접근성 설정에서 [BrightVolume Master] 항목을 활성화하고, 시스템 설정을 수정할 수 있는 권한을 부여해야 합니다.</string>
-    <string name="accessibility_button_text">접근성 서비스</string>
-    <string name="system_settings_button_text">시스템 설정 수정</string>
+    <string name="explanation_text">BrightVolume Master 앱을 실행하려면 디바이스의 설정(Settings)에서 다음 세 가지 권한을 활성화 해야 합니다:</string>
+    <string name="accessibility_button_text">접근성 서비스 권한</string>
+    <string name="system_settings_button_text">시스템 설정 수정 권한</string>
+    <string name="usage_data_access_button_text">앱 사용 기록 접근 권한</string>
     <string name="tick_icon_description">Tick Icon</string>
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
