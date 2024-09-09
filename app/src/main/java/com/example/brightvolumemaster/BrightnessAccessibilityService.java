@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.media.AudioManager;
 import android.util.Log;
@@ -157,7 +156,6 @@ public class BrightnessAccessibilityService extends AccessibilityService {
 
     private int convertScaleToVolume(int scaleValue) {
         // Convert the volume value from the user-friendly scale (0-100) to the system scale (0-maxVolume)
-
         return (int) ((scaleValue / 100.0) * maxVolume);
     }
 
@@ -168,7 +166,7 @@ public class BrightnessAccessibilityService extends AccessibilityService {
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeValue, 0);
     }
 
-    // Method to adjust settings based on the foreground app using UsageStatsManager
+    // Method to adjust settings based on the foreground app
     private void adjustSettingsForForegroundApp() {
         String packageName = lastForegroundApp;
 
@@ -176,26 +174,77 @@ public class BrightnessAccessibilityService extends AccessibilityService {
         SharedPreferences preferencesUserApp = getApplicationContext().getSharedPreferences("UserApp", Context.MODE_PRIVATE);
         Set<String> uniqueAppPackageNames = preferencesUserApp.getStringSet("uniqueAppPackageNames", new HashSet<>());
 
-        if (uniqueAppPackageNames.contains(packageName)) {
+        // Check if the package name is in the uniqueAppPackageNames
+        boolean isUserApp = uniqueAppPackageNames.contains(packageName);
+
+        if (isUserApp) {
             // Use packageName to access SharedPreferences
             SharedPreferences preferencesSettingValue = getApplicationContext().getSharedPreferences(packageName + "_settings", Context.MODE_PRIVATE);
 
-            // Retrieve brightness and volume values based on the current package name
-            int brightnessValue = preferencesSettingValue.getInt(packageName + "SAVED_BRIGHTNESS", defaultBrightness);
-            int volumeValue = preferencesSettingValue.getInt(packageName + "SAVED_VOLUME", defaultVolume);
+            // Check it there are stored values for brightness and volume
+            boolean hasStoredBrightness = preferencesSettingValue.contains(packageName + "SAVED_BRIGHTNESS");
+            boolean hasStoredVolume = preferencesSettingValue.contains(packageName + "SAVED_VOLUME");
 
-            int systemBrightnessValue = convertScaleToBrightness(brightnessValue);
-            int systemVolumeValue = convertScaleToVolume(volumeValue);
+            int systemBrightnessValue;
+            int systemVolumeValue;
+
+            if (hasStoredBrightness) {
+                // Retrieve the stored brightness value
+                int brightnessValue = preferencesSettingValue.getInt(packageName + "SAVED_BRIGHTNESS", -1);
+                systemBrightnessValue = convertScaleToBrightness(brightnessValue);
+            } else {
+                // Use the system's default brightness value
+                systemBrightnessValue = systemBrightness;
+            }
+
+            if (hasStoredVolume) {
+                // Retrieve the stored volume value
+                int volumeValue = preferencesSettingValue.getInt(packageName + "SAVED_VOLUME", -1);
+                systemVolumeValue = convertScaleToVolume(volumeValue);
+            } else {
+                // Use the system's default volume value
+                systemVolumeValue = systemVolume;
+            }
 
             adjustBrightness(systemBrightnessValue);
             adjustVolume(systemVolumeValue);
 
-            Log.d("Settings", "Applied settings for " + packageName + ": brightness = " + brightnessValue + ", volume = " + volumeValue);
+            Log.d("Settings", "\n" +
+                    "    // Method to adjust settings based on the foreground app using UsageStatsManager\n" +
+                    "    private void adjustSettingsForForegroundApp() {\n" +
+                    "        String packageName = lastForegroundApp;\n" +
+                    "\n" +
+                    "        // Retrieve uniqueAppPackageNames from SharedPreferences\n" +
+                    "        SharedPreferences preferencesUserApp = getApplicationContext().getSharedPreferences(\"UserApp\", Context.MODE_PRIVATE);\n" +
+                    "        Set<String> uniqueAppPackageNames = preferencesUserApp.getStringSet(\"uniqueAppPackageNames\", new HashSet<>());\n" +
+                    "\n" +
+                    "        if (uniqueAppPackageNames.contains(packageName)) {\n" +
+                    "            // Use packageName to access SharedPreferences\n" +
+                    "            SharedPreferences preferencesSettingValue = getApplicationContext().getSharedPreferences(packageName + \"_settings\", Context.MODE_PRIVATE);\n" +
+                    "\n" +
+                    "            // Retrieve brightness and volume values based on the current package name\n" +
+                    "            int brightnessValue = preferencesSettingValue.getInt(packageName + \"SAVED_BRIGHTNESS\", defaultBrightness);\n" +
+                    "            int volumeValue = preferencesSettingValue.getInt(packageName + \"SAVED_VOLUME\", defaultVolume);\n" +
+                    "\n" +
+                    "            int systemBrightnessValue = convertScaleToBrightness(brightnessValue);\n" +
+                    "            int systemVolumeValue = convertScaleToVolume(volumeValue);\n" +
+                    "\n" +
+                    "            adjustBrightness(systemBrightnessValue);\n" +
+                    "            adjustVolume(systemVolumeValue);\n" +
+                    "\n" +
+                    "            Log.d(\"Settings\", \"Applied settings for \" + packageName + \": brightness = \" + brightnessValue + \", volume = \" + volumeValue);\n" +
+                    "        } else {\n" +
+                    "            // Apply the system's default brightness and volume values when the user is not running any Android app.\n" +
+                    "            adjustBrightness(systemBrightness);\n" +
+                    "            adjustVolume(systemVolume);\n" +
+                    "            Log.d(\"Settings\", \"Applied settings for \" + packageName + \": brightness = \" + systemBrightness + \", volume = \" + systemVolume);\n" +
+                    "        }\n" +
+                    "    }Applied settings for " + packageName + ": brightness = " + systemBrightnessValue + ", volume = " + systemVolumeValue);
         } else {
-            // Apply the system's default brightness and volume values when the user is not running any Android app.
+            // If it's not a user-managed app, apply the system's default settings directly
             adjustBrightness(systemBrightness);
             adjustVolume(systemVolume);
-            Log.d("Settings", "Applied settings for " + packageName + ": brightness = " + systemBrightness + ", volume = " + systemVolume);
+            Log.d("Settings", "Applied default system settings for " + packageName + ": brightness = " + systemBrightness + ", volume = " + systemVolume);
         }
     }
 }
