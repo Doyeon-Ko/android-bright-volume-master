@@ -45,9 +45,9 @@
                 android:src="@drawable/tick_icon"
                 android:visibility="gone"
                 android:contentDescription="@string/tick_icon_description"/>
-            
+
         </LinearLayout>
-        
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

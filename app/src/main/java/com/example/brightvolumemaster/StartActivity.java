@@ -78,10 +78,10 @@ public class StartActivity extends AppCompatActivity {
             Log.d("accessibilityPermissionAttempted", "the boolean value of accessibilityPermissionAttempted : " + accessibilityPermissionAttempted);
 
             // Check if the user has attempted to grant accessibility permission before
-            if (!accessibilityPermissionAttempted) {  
+            if (!accessibilityPermissionAttempted) {
                 // If it's the first attempt, show the confirmation dialog
                 showPermissionDialog("알림", "접근성 권한 필요 : BrightVolume Master는 디바이스에서 실행 중인 앱의 전환을 감지하고, 해당 앱에 맞춰 밝기와 볼륨 설정을 적용하기 위해 접근성 권한을 사용합니다.\n\n" +
-                        "이 권한은 특정 앱이 실행 중일 때 BrightVolume Master가 이를 감지하여 밝기와 볼륨 설정값을 자동으로 조정하는 데 필요합니다. 접근성 설정 창의 '설치된 서비스' 또는 '다운로드된 앱'에서 [BrightVolume Master] 항목을 활성화해주세요.",
+                                "이 권한은 특정 앱이 실행 중일 때 BrightVolume Master가 이를 감지하여 밝기와 볼륨 설정값을 자동으로 조정하는 데 필요합니다. 접근성 설정 창의 '설치된 서비스' 또는 '다운로드된 앱'에서 [BrightVolume Master] 항목을 활성화해주세요.",
                         "취소", "설정 화면으로 이동",
                         (dialog, which) -> {
                             // User clicked "취소"
@@ -168,7 +168,7 @@ public class StartActivity extends AppCompatActivity {
             if(!usageAccessPermissionAttempted) {
                 // If it's the first attempt, show the confirmation dialog
                 showPermissionDialog("알림", "앱 사용 기록 접근 권한 필요 : BrightVolume Master는 현재 실행 중인 앱을 정확하게 식별하고 그에 맞는 밝기와 볼륨 설정을 적용하기 위해 앱 사용 기록 접근 권한을 사용합니다. \n\n" +
-                        "이 권한은 최근 사용된 앱 정보를 바탕으로 BrightVolume Master가 올바른 설정을 적용할 수 있도록 합니다. 이때 다른 앱 사용 내역에는 접근하지 않으며, 사용자의 개인정보를 보호합니다.",
+                                "이 권한은 최근 사용된 앱 정보를 바탕으로 BrightVolume Master가 올바른 설정을 적용할 수 있도록 합니다. 이때 다른 앱 사용 내역에는 접근하지 않으며, 사용자의 개인정보를 보호합니다.",
                         "취소", "설정 화면으로 이동",
                         (dialog, which) -> {
                             // User clicked "취소"
@@ -331,4 +331,3 @@ public class StartActivity extends AppCompatActivity {
                 .show();
     }
 }
-

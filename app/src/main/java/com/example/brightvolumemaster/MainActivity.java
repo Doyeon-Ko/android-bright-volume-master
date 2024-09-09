@@ -6,9 +6,11 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -155,21 +157,19 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout createLinearLayoutForApp(int columnCount, int linearLayoutNum) {
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(LinearLayout.VERTICAL);
+        linearLayout.setGravity(Gravity.CENTER);
+        linearLayout.setPadding(0, 20, 0, 20);
 
         GridLayout.LayoutParams linearlayoutParams = new GridLayout.LayoutParams();
         linearlayoutParams.width = 0;
         linearlayoutParams.height = GridLayout.LayoutParams.WRAP_CONTENT;
         linearlayoutParams.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); //Equal column weight
-        linearlayoutParams.rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-
+        linearlayoutParams.rowSpec = GridLayout.spec(GridLayout.UNDEFINED,1f);
         linearlayoutParams.leftMargin = gap;
 
         if (linearLayoutNum > columnCount - 1) {
             linearlayoutParams.topMargin = pixelValue;
         }
-
-        linearlayoutParams.rightMargin = 0;
-        linearlayoutParams.bottomMargin = 0;
 
         linearLayout.setLayoutParams(linearlayoutParams);
 
@@ -182,16 +182,20 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout.LayoutParams appIconParams = new LinearLayout.LayoutParams(imageSize, imageSize);
         appIcon.setScaleType(ImageView.ScaleType.CENTER_CROP);
         appIcon.setLayoutParams(appIconParams);
+        appIcon.setBackgroundColor(Color.TRANSPARENT);
 
         //Create TextView
         TextView appName = new TextView(this);
         appName.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        appName.setTextSize(15);
+        appName.setTextSize(14);
         appName.setTypeface(null, Typeface.BOLD);
         appName.setGravity(Gravity.CENTER);
 
+        appName.setMaxLines(2);
+        appName.setEllipsize(TextUtils.TruncateAt.END);
+        appName.setMaxWidth(imageSize);
 
         // Add the ImageButton and TextView to the LinearLayout
         linearLayout.addView(appIcon);
@@ -204,14 +208,16 @@ public class MainActivity extends AppCompatActivity {
         GridLayout gridLayout = new GridLayout(this);
         gridLayout.setColumnCount(columnCount);
         gridLayout.setRowCount(rowCount);
+        gridLayout.setAlignmentMode(GridLayout.ALIGN_MARGINS);
 
         // Set layout parameters for GridLayout
         RelativeLayout.LayoutParams gridLayoutParams = new RelativeLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
         gridLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         gridLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
         gridLayoutParams.addRule(RelativeLayout.CENTER_VERTICAL);
+        gridLayout.setLayoutParams(gridLayoutParams);
 
         // Set margins for the GridLayout
         int marginTop = getResources().getDimensionPixelSize(R.dimen.grid_layout_margin_top);
@@ -226,17 +232,15 @@ public class MainActivity extends AppCompatActivity {
             GridLayout.LayoutParams layoutParams = new GridLayout.LayoutParams();
 
             // Set layout parameters for the LinearLayout
-            layoutParams.width = 0;
+            layoutParams.width = GridLayout.LayoutParams.WRAP_CONTENT;
             layoutParams.height = GridLayout.LayoutParams.WRAP_CONTENT;
-            layoutParams.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-            layoutParams.rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+            layoutParams.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, GridLayout.FILL, 1f);
+            layoutParams.rowSpec = GridLayout.spec(GridLayout.UNDEFINED, GridLayout.FILL,1f);
             linearLayoutForApp.setLayoutParams(layoutParams);
 
             // Add the LinearLayout to the GridLayout
-            gridLayout.addView(linearLayoutForApp, layoutParams);
+            gridLayout.addView(linearLayoutForApp);
         }
-
-        gridLayout.setLayoutParams(gridLayoutParams);
 
         return gridLayout;
     }
@@ -311,15 +315,15 @@ public class MainActivity extends AppCompatActivity {
 
         appName.setText(appInfo.loadLabel(getPackageManager()));
 
-            // Set onClickListener for the app icon
-            appIcon.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    // This code defines what happens when an app icon is clicked
-                    // It doesn't execute immediately; it waits for a click event
-                    startSubActivity(appInfo);
-                }
-            });
+        // Set onClickListener for the app icon
+        appIcon.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // This code defines what happens when an app icon is clicked
+                // It doesn't execute immediately; it waits for a click event
+                startSubActivity(appInfo);
+            }
+        });
     }
 
     private void addNewScreen(RelativeLayout createdPageLayout) {
